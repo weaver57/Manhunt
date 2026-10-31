@@ -1,0 +1,36 @@
+# Manhunt — project root
+node_modules/
+.env.local
+.env.*.local
+
+# Expo / React Native
+app/.expo/
+app/dist/
+app/web-build/
+
+# Credentials — never commit these
+app/google-services.json
+app/GoogleService-Info.plist
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/settings.json
+.idea/
+
+# Logs
+*.log
+npm-debug.*
+yarn-debug.*
+yarn-error.*
