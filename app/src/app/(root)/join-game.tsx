@@ -28,8 +28,13 @@ export default function JoinGameScreen() {
     try {
       const game = await joinGame.mutateAsync(normalized);
       router.replace({ pathname: '/(root)/lobby/[gameId]', params: { gameId: game.id } });
-    } catch {
-      setMessage('Could not join. Check the code and your connection, then try again.');
+    } catch (err: unknown) {
+      console.warn('[join-game] join_game failed:', err);
+      const raw = err instanceof Error ? err.message : String(err);
+      const friendly = /^you must be signed in$/i.test(raw)
+        ? 'You are not signed in on this device — go back and sign in with Google again.'
+        : raw || 'Check the code and your connection, then try again.';
+      setMessage(`Could not join. ${friendly}`);
     }
   }
 

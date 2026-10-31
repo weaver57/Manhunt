@@ -38,8 +38,15 @@ export default function CreateGameScreen() {
         settings: { ...DEFAULT_GAME_SETTINGS, durationMinutes, headStartSeconds, infectionMode: mode === 'infection' },
       });
       router.replace({ pathname: '/(root)/lobby/[gameId]', params: { gameId: game.id } });
-    } catch {
-      setFormError('Could not create the game. Check your connection, then try again.');
+    } catch (err: unknown) {
+      console.warn('[create-game] create_game failed:', err);
+      const raw = err instanceof Error ? err.message : String(err);
+      const friendly = /^you must be signed in$/i.test(raw)
+        ? 'You are not signed in on this device — go back and sign in with Google again.'
+        : raw
+          ? `Check your connection, then try again. (${raw})`
+          : 'Check your connection, then try again.';
+      setFormError(`Could not create the game. ${friendly}`);
     }
   }
 
@@ -90,7 +97,7 @@ const styles = StyleSheet.create({
   modeSection: { gap: spacing[2] },
   modeRow: { minHeight: spacing[16], flexDirection: 'row', alignItems: 'center', gap: spacing[3], padding: spacing[4] },
   modeCopy: { flex: 1, gap: spacing[1] },
-  modeTitle: { color: colors.text.primary, fontFamily: typography.bodySemiBold, fontSize: fontSize.md, lineHeight: lineHeight.md },
+  modeTitle: { color: colors.text.primary, fontFamily: typography.subheading, fontSize: fontSize.md, lineHeight: lineHeight.md },
   modeHint: { color: colors.text.secondary, fontFamily: typography.body, fontSize: fontSize.sm, lineHeight: lineHeight.sm },
   selectedCard: { borderColor: colors.brand.primary },
   rules: { color: colors.text.secondary, fontFamily: typography.body, fontSize: fontSize.sm, lineHeight: lineHeight.sm },
