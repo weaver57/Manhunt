@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { PlayerRole } from '@/types/database';
 import { supabase } from '@/lib/supabase/client';
 import type { MarkerFix } from './mapModel';
@@ -53,6 +53,7 @@ export type TrackMap = Record<string, PlayerTrack>;
  */
 export function useLiveLocations(gameId: string | undefined, roles?: Record<string, PlayerRole>): TrackMap {
   const [tracks, setTracks] = useState<TrackMap>({});
+  const instanceRef = useRef(Math.random().toString(36).slice(2, 10));
 
   useEffect(() => {
     if (!gameId) {
@@ -60,6 +61,9 @@ export function useLiveLocations(gameId: string | undefined, roles?: Record<stri
       return;
     }
     let cancelled = false;
+    // Instance-unique topic — expo-router can keep two instances of this hook
+    // alive at once (frozen screens), and `.on()` after subscribe() throws.
+    const topic = `locations:${gameId}:${instanceRef.current}`;
 
     // Backfill: latest two fixes per user in the last while, so a fresh
     // map open draws everyone immediately (stale data gets greaded down by
@@ -94,7 +98,7 @@ export function useLiveLocations(gameId: string | undefined, roles?: Record<stri
       }
     })();
 
-    const channel = supabase.channel(`locations:${gameId}`)
+    const channel = supabase.channel(topic)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'player_locations', filter: `game_id=eq.${gameId}` },

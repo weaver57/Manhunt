@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Database } from '@/types/database';
 import { supabase } from '@/lib/supabase/client';
 
@@ -13,6 +13,7 @@ const MAX_ROWS = 80;
  */
 export function useEventFeed(gameId: string | undefined): FeedEventRow[] {
   const [rows, setRows] = useState<FeedEventRow[]>([]);
+  const instanceRef = useRef(Math.random().toString(36).slice(2, 10));
 
   useEffect(() => {
     if (!gameId) {
@@ -20,6 +21,7 @@ export function useEventFeed(gameId: string | undefined): FeedEventRow[] {
       return;
     }
     let cancelled = false;
+    const topic = `events:${gameId}:${instanceRef.current}`;
 
     (async () => {
       try {
@@ -37,7 +39,7 @@ export function useEventFeed(gameId: string | undefined): FeedEventRow[] {
       }
     })();
 
-    const channel = supabase.channel(`events:${gameId}`)
+    const channel = supabase.channel(topic)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'events', filter: `game_id=eq.${gameId}` },

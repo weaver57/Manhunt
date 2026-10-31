@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Database, GameMode, GameSettings, PlayerRole } from '@/types/database';
 import { supabase } from '@/lib/supabase/client';
@@ -27,6 +27,7 @@ export function useJoinGame() {
 export function useGameLobby(gameId: string | undefined, userId: string | undefined) {
   const queryClient = useQueryClient();
   const key = useMemo(() => ['game-lobby', gameId] as const, [gameId]);
+  const instanceRef = useRef(Math.random().toString(36).slice(2, 10));
   const query = useQuery({
     queryKey: key,
     enabled: !!gameId,
@@ -44,7 +45,13 @@ export function useGameLobby(gameId: string | undefined, userId: string | undefi
 
   useEffect(() => {
     if (!gameId) return;
-    const channel = supabase.channel(`lobby:${gameId}`)
+    // Instance-unique topic: expo-router keeps the previous screen mounted
+    // (frozen) during navigation, so two instances of this hook — lobby and
+    // game screens — can be alive at once. Reusing a topic here would return
+    // the already-subscribed channel and `.on()` after subscribe throws
+    // ("cannot add postgres_changes callbacks after subscribe()").
+    const topic = `lobby:${gameId}:${instanceRef.current}`;
+    const channel = supabase.channel(topic)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `id=eq.${gameId}` }, () => queryClient.invalidateQueries({ queryKey: key }))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'game_players', filter: `game_id=eq.${gameId}` }, () => queryClient.invalidateQueries({ queryKey: key }))
       .subscribe();
