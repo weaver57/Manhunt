@@ -1,5 +1,7 @@
-import { StyleSheet, Text, View } from 'react-native';
-import { colors, fontSize, size } from '@/constants/theme';
+import { useEffect, useRef } from 'react';
+import { AccessibilityInfo, Animated, StyleSheet, Text, View } from 'react-native';
+import { Circle, Diamond, Triangle } from 'lucide-react-native';
+import { colors, fontSize, lineHeight, mapGlass, marker, markerFade, motion, radius, size, spacing, stroke, typography } from '@/constants/theme';
 import { Avatar } from '@/components/ui';
 import type { PlayerRole } from '@/types/database';
 import type { MarkerFreshness } from '@/lib/map/mapModel';
@@ -10,12 +12,7 @@ const ROLE_COLOR: Record<PlayerRole, string> = {
   spectator: colors.role.spectator,
 };
 
-const OPACITY: Record<MarkerFreshness, number> = {
-  live: 1,
-  recent: 0.75,
-  stale: 0.45,
-  offline: 0.25,
-};
+const ROLE_ICON = { chaser: Diamond, runner: Circle, spectator: Triangle } as const;
 
 export interface PlayerMarkerProps {
   name: string;
@@ -34,14 +31,40 @@ export interface PlayerMarkerProps {
 
 /**
  * One map marker: uncertainty circle behind, heading cone for the self slot,
- * avatar bubble + name + role-coloured ring. Fades with staleness.
+ * avatar bubble + name + role-coloured ring. Staleness eases one fade level
+ * down over motion.slow (instant under reduced motion, per spec §accessibility).
  */
 export function PlayerMarker({ name, role, avatarUrl, fresh, lastSeen, uncertaintyDiameterPx, headingDeg, isSelf, showCone }: PlayerMarkerProps) {
   const ringColor = ROLE_COLOR[role];
-  const uncertainty = uncertaintyDiameterPx > 0 ? Math.max(uncertaintyDiameterPx, 26) : 0;
+  const RoleIcon = ROLE_ICON[role];
+  const uncertainty = uncertaintyDiameterPx > 0 ? Math.max(uncertaintyDiameterPx, marker.uncertaintyMinPx) : 0;
+
+  // Staleness crossfade: animate to the markerFade level for the new state
+  // instead of snapping. Reduced-motion users get the instant value.
+  const target = markerFade[fresh];
+  const fade = useRef<Animated.Value>(new Animated.Value(target)).current;
+  const applied = useRef(target);
+  useEffect(() => {
+    if (applied.current === target) return;
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled()
+      .then((reduceMotion) => {
+        if (!mounted) return;
+        if (reduceMotion) {
+          fade.setValue(target);
+        } else {
+          Animated.timing(fade, { toValue: target, duration: motion.slow, useNativeDriver: true }).start();
+        }
+        applied.current = target;
+      })
+      .catch(() => undefined);
+    return () => {
+      mounted = false;
+    };
+  }, [fade, target]);
 
   return (
-    <View style={[styles.root, { opacity: OPACITY[fresh] }]} pointerEvents="none">
+    <Animated.View style={[styles.root, { opacity: fade }]} pointerEvents="none">
       {uncertainty > 0 ? (
         <View
           style={[
@@ -59,77 +82,80 @@ export function PlayerMarker({ name, role, avatarUrl, fresh, lastSeen, uncertain
         <View style={[styles.cone, { transform: [{ rotate: `${headingDeg}deg` }] }]} pointerEvents="none" />
       ) : null}
       <View style={[styles.bubble, { borderColor: ringColor }]}>
-        <Avatar name={name} imageUrl={avatarUrl} size={size.avatarSmall} color={ringColor} />
+        <Avatar name={name} imageUrl={avatarUrl} size={size.avatarSmall} color={colors.surface[2]} />
+        <View style={[styles.roleMark, { borderColor: ringColor }]} accessibilityLabel={`${role} marker`}>
+          <RoleIcon size={spacing[2]} color={ringColor} strokeWidth={stroke.icon} />
+        </View>
       </View>
       <Text style={styles.name} numberOfLines={1}>
-        {name}
-        {isSelf ? ' · You' : ''}
+        {name}{isSelf ? ' · You' : ''}
       </Text>
       {lastSeen ? <Text style={styles.lastSeen}>{lastSeen}</Text> : null}
-    </View>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   root: {
-    width: 0,
-    height: 0,
+    width: spacing[0],
+    height: spacing[0],
     alignItems: 'center',
     justifyContent: 'center',
   },
   uncertainty: {
     position: 'absolute',
-    borderRadius: 999,
-    borderWidth: 1,
-    backgroundColor: 'rgba(142,124,255,0.10)',
-    borderColor: 'rgba(142,124,255,0.30)',
+    borderRadius: radius.full,
+    borderWidth: stroke.border,
+    backgroundColor: colors.brand.soft,
+    borderColor: colors.atmosphere.rings,
   },
   cone: {
     position: 'absolute',
-    top: -42,
-    left: 0,
-    width: 0,
-    height: 0,
+    top: -marker.coneLift,
+    left: spacing[0],
+    width: spacing[0],
+    height: spacing[0],
     backgroundColor: 'transparent',
+    borderStyle: 'solid',
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     borderTopColor: 'transparent',
-    borderLeftWidth: 20,
-    borderRightWidth: 20,
-    borderBottomWidth: 80,
-    borderBottomColor: 'rgba(142,124,255,0.30)',
+    borderLeftWidth: marker.coneHalfWidth,
+    borderRightWidth: marker.coneHalfWidth,
+    borderBottomWidth: marker.coneHeight,
+    borderBottomColor: colors.glow.brand,
   },
   bubble: {
-    padding: 2,
-    borderRadius: 999,
-    borderWidth: 2,
-    backgroundColor: colors.bg.base,
-    shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    padding: spacing[0],
+    borderRadius: radius.full,
+    borderWidth: marker.ringWidth,
+    backgroundColor: mapGlass.background,
   },
+  roleMark: { position: 'absolute', right: -spacing[1], bottom: -spacing[1], width: spacing[4], height: spacing[4], borderRadius: radius.full, alignItems: 'center', justifyContent: 'center', backgroundColor: mapGlass.background, borderWidth: stroke.border },
   name: {
     position: 'absolute',
-    top: size.avatarSmall + 8,
+    top: size.avatarSmall + spacing[2],
     color: colors.text.primary,
+    fontFamily: typography.bodySemiBold,
     fontSize: fontSize.xs,
-    backgroundColor: 'rgba(9,11,20,0.72)',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 6,
+    lineHeight: lineHeight.xs,
+    backgroundColor: mapGlass.background,
+    paddingHorizontal: spacing[2],
+    paddingVertical: spacing[0],
+    borderRadius: radius.xs,
     overflow: 'hidden',
-    maxWidth: 120,
+    maxWidth: marker.labelMaxWidth,
   },
   lastSeen: {
     position: 'absolute',
-    top: size.avatarSmall + 24,
+    top: size.avatarSmall + spacing[6],
     color: colors.text.secondary,
+    fontFamily: typography.body,
     fontSize: fontSize.xs,
-    backgroundColor: 'rgba(9,11,20,0.72)',
-    paddingHorizontal: 4,
-    borderRadius: 5,
+    lineHeight: lineHeight.xs,
+    backgroundColor: mapGlass.background,
+    paddingHorizontal: spacing[1],
+    borderRadius: radius.xs,
     overflow: 'hidden',
   },
 });

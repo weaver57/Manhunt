@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Camera, MapView, MarkerView, UserTrackingMode } from '@maplibre/maplibre-react-native';
 import type { CameraRef } from '@maplibre/maplibre-react-native';
+import { motion } from '@/constants/theme';
 import { PlayerMarker } from './PlayerMarker';
 import {
   FOLLOW_ZOOM,
@@ -51,7 +52,7 @@ export function LiveMap({ styleUrl, markers, follow, onUserPan, recenterSignal, 
     if (!recenterSignal || !cameraRef.current) return;
     if (!selfMarker) return;
     const target = [selfMarker.current.longitude, selfMarker.current.latitude] as [number, number];
-    cameraRef.current.flyTo(target, lowPower ? 200 : 500);
+    cameraRef.current.flyTo(target, lowPower ? motion.base : motion.camera);
   }, [recenterSignal, selfMarker, lowPower]);
 
   const markerViews = useMemo(
@@ -105,7 +106,7 @@ export function LiveMap({ styleUrl, markers, follow, onUserPan, recenterSignal, 
           followUserLocation={follow}
           followUserMode={headingUp ? UserTrackingMode.FollowWithHeading : UserTrackingMode.FollowWithCourse}
           zoomLevel={FOLLOW_ZOOM}
-          animationDuration={lowPower ? 0 : 400}
+          animationDuration={lowPower ? 0 : motion.base}
         />
         {markerViews}
       </MapView>

@@ -99,6 +99,13 @@ export const colors = {
   atmosphere: systemPalette.atmosphere,
 } as const;
 
+/** Quiet, translucent surfaces that preserve legibility over live map tiles. */
+export const mapGlass = {
+  background: Appearance.getColorScheme() === 'light' ? 'rgba(255,255,255,0.92)' : 'rgba(9,11,20,0.86)',
+  backgroundSoft: Appearance.getColorScheme() === 'light' ? 'rgba(255,255,255,0.82)' : 'rgba(9,11,20,0.76)',
+  border: Appearance.getColorScheme() === 'light' ? 'rgba(10,12,17,0.16)' : 'rgba(255,255,255,0.14)',
+};
+
 export const spacing = { 0: 0, 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32, 10: 40, 12: 48, 16: 64 } as const;
 export const space = spacing;
 export const radius = { xs: 8, sm: 10, md: 16, lg: 24, xl: 32, full: 999 } as const;
@@ -120,7 +127,8 @@ export const lineHeight = {
   '2xl': typeScale.numeric.line, '3xl': typeScale.display.line,
 } as const;
 export const typography = {
-  display: 'ManropeBold', displaySemiBold: 'ManropeSemiBold', displayRegular: 'ManropeRegular',
+  display: 'SpaceGroteskBold', displaySemiBold: 'SpaceGroteskSemiBold', displayRegular: 'SpaceGroteskRegular',
+  subheading: 'ManropeSemiBold',
   body: 'ManropeRegular', bodyMedium: 'ManropeMedium', bodySemiBold: 'ManropeSemiBold',
   bodyBold: 'ManropeBold', mono: 'JetBrainsMonoRegular',
 } as const;
@@ -136,6 +144,15 @@ export const typeRatio = { avatar: 0.4, avatarLine: 0.52 } as const;
 export const opacity = { pressed: 0.92, disabled: 0.55, muted: 0.84, roleGlow: 0.35, vignetteLayer: 0.5, heroWash: 0.12 } as const;
 export const scale = { pressed: 0.97 } as const;
 export const sheet = { snapMin: '40%' as const, snapMid: '70%' as const, snapMax: '92%' as const };
+export const marker = {
+  ringWidth: 2,            // avatar role ring in-game (spec §6)
+  coneHeight: 80,          // self heading cone triangle (spec §9 markers)
+  coneHalfWidth: 20,
+  coneLift: 42,
+  uncertaintyMinPx: 26,    // smallest visible uncertainty circle
+  labelMaxWidth: 120,
+} as const;
+export const markerFade = { live: 1, recent: 0.75, stale: 0.5, offline: 0.25 } as const;
 export const motion = { fast: 120, base: 200, slow: 320, camera: 600, tag: 500 } as const;
 export const duration = { fast: motion.fast, base: motion.base, slow: motion.slow, burst: motion.camera, zone: 1600, toast: 3000 } as const;
 export const zIndex = { map: 0, hudBase: 10, modal: 20, toast: 30, sos: 40 } as const;

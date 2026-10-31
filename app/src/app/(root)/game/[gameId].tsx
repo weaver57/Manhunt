@@ -235,6 +235,7 @@ export default function GameScreen() {
               packState={pack.state}
               onRetryPack={pack.retry}
               offline={offline}
+              connection={offline ? 'offline' : tracking.pendingUploads > 0 ? 'syncing' : 'ok'}
             />
           ) : null}
           <EventFeed items={feed} />
