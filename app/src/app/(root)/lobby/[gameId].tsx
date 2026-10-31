@@ -77,8 +77,18 @@ export default function LobbyScreen() {
     try {
       setActionError(null);
       await action();
-    } catch {
-      setActionError(failure);
+    } catch (err: unknown) {
+      console.warn('[lobby] action failed:', err);
+      const raw = err instanceof Error ? err.message : String(err);
+      let friendly = failure;
+      if (/assign at least one chaser/i.test(raw)) {
+        friendly = 'At least one chaser must be assigned before starting — use "Assign chaser" or tap a player row.';
+      } else if (/not everyone is ready/i.test(raw)) {
+        friendly = 'Everyone must mark themselves Ready (including you) before starting.';
+      } else if (raw) {
+        friendly = `${failure} (${raw})`;
+      }
+      setActionError(friendly);
     }
   }
   async function shareInvite() {
@@ -170,6 +180,13 @@ export default function LobbyScreen() {
         >
           {`Players · ${players.length}`}
         </SectionLabel>
+        {isHost && game.status === 'lobby' && !players.some((player) => player.role === 'chaser') ? (
+          <InlineNotice
+            message="No chaser assigned — the game can't start without one."
+            tone="warning"
+            action={<Button label="Assign chaser" size="sm" block={false} onPress={() => void assignRandomChaser()} />}
+          />
+        ) : null}
         {players.length ? (
           <Card padding="sm">
             {players.map((player, index) => (
@@ -282,7 +299,7 @@ const styles = StyleSheet.create({
   playerRow: { minHeight: size.row, flexDirection: 'row', alignItems: 'center', gap: spacing[3], paddingVertical: spacing[3] },
   playerDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderSubtle },
   playerCopy: { flex: 1, gap: spacing[2] },
-  playerName: { color: colors.text.primary, fontFamily: typography.bodySemiBold, fontSize: fontSize.md, lineHeight: lineHeight.md },
+  playerName: { color: colors.text.primary, fontFamily: typography.subheading, fontSize: fontSize.md, lineHeight: lineHeight.md },
   playerMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
   manageButton: { minWidth: size.touch, minHeight: size.touch, alignItems: 'center', justifyContent: 'center' },
   statusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2], paddingRight: spacing[4] },
