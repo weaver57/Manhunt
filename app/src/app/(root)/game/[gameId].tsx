@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View, useColorScheme } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNetInfo } from '@react-native-community/netinfo';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { colors, fontSize, lineHeight, spacing } from '@/constants/theme';
-import { Button, InlineNotice, Screen } from '@/components/ui';
+import { WifiOff } from 'lucide-react-native';
+import { colors, fontSize, lineHeight, mapGlass, radius, size, spacing, stroke, typography } from '@/constants/theme';
+import { AppIcon, Button, InlineNotice } from '@/components/ui';
 import LoadingState from '@/components/LoadingState';
+import ErrorState from '@/components/ErrorState';
 import { useSession } from '@/lib/auth/useSession';
 import { useGameLobby } from '@/lib/games/useGameLobby';
 import { useTrackingStore } from '@/lib/location/useTrackingStore';
@@ -12,7 +15,7 @@ import { useGameClock } from '@/lib/map/useGameClock';
 import { useLiveLocations, type PlayerTrack } from '@/lib/map/useLiveLocations';
 import { useEventFeed } from '@/lib/map/useEventFeed';
 import { useOfflinePack } from '@/lib/map/useOfflinePack';
-import { stylesForKey, configuredMapTilerKey } from '@/lib/map/styles';
+import { stylesForKey, configuredMapTilerKey, isUrlStyle } from '@/lib/map/styles';
 import { buildFeed } from '@/lib/map/feedModel';
 import { hudStats } from '@/lib/map/hudModel';
 import {
@@ -26,6 +29,7 @@ import {
 import { LiveMap, type LiveMapMarker } from '@/components/map/LiveMap';
 import { HUDBar } from '@/components/map/HUDBar';
 import { EventFeed } from '@/components/map/EventFeed';
+import { MapEdgeAtmosphere } from '@/components/map/MapEdgeAtmosphere';
 
 /**
  * Live game screen (Phase 4): MapLibre map + HUD + event feed.
@@ -37,6 +41,8 @@ export default function GameScreen() {
   const router = useRouter();
   const { session } = useSession();
   const scheme = useColorScheme();
+  const network = useNetInfo();
+  const offline = network.isConnected === false || network.isInternetReachable === false;
   const userId = session?.user.id;
   const lobby = useGameLobby(gameId, userId);
   const game = lobby.data?.game;
@@ -163,8 +169,10 @@ export default function GameScreen() {
   }, [tracks, selfTrack, game?.settings?.playArea]);
 
   const mapStyles = useMemo(() => stylesForKey(configuredMapTilerKey()), []);
-  const styleUrl = scheme === 'light' ? mapStyles.light : mapStyles.dark;
-  const pack = useOfflinePack({ gameId: game?.id, styleUrl, bounds: packBounds });
+  const activeStyle = scheme === 'light' ? mapStyles.light : mapStyles.dark;
+  // Offline packs need a URL-based style; the raster fallback renders inline.
+  const pack = useOfflinePack({ gameId: game?.id, styleUrl: isUrlStyle(activeStyle) ? activeStyle : undefined, bounds: packBounds });
+  const styleUrl = activeStyle;
 
   // ---- Camera state -----------------------------------------------------------
   const [lowPower, setLowPower] = useState(() => tracking.batteryLevel !== null && tracking.batteryLevel < 25);
@@ -174,13 +182,19 @@ export default function GameScreen() {
 
   const ended = game?.status === 'ended';
   const inGamePhase = !!game && ['countdown', 'head_start', 'active', 'paused'].includes(game.status);
+  const urgentRole = stats?.nearest?.label.endsWith(' m') && Number.parseInt(stats.nearest.label, 10) <= 100
+    ? stats.role === 'runner' ? 'chaser' : stats.role === 'chaser' ? 'runner' : undefined
+    : undefined;
+
+  if (!gameId) return <ErrorState message="This game link is missing its lobby ID." />;
+  if (lobby.isError && !game) {
+    return <ErrorState message="The live game could not be loaded. Check your connection and try again." onRetry={() => { void lobby.refetch(); }} />;
+  }
 
   if (!game) {
     return (
       <SafeAreaView style={styles.safe}>
-        <Screen contentStyle={styles.center}>
-          <LoadingState label="Loading the map…" />
-        </Screen>
+        <LoadingState label="Loading the map…" />
       </SafeAreaView>
     );
   }
@@ -198,6 +212,13 @@ export default function GameScreen() {
             headingUp={headingUp}
             lowPower={lowPower}
           />
+          <MapEdgeAtmosphere urgentRole={urgentRole} />
+          {offline ? (
+            <View style={styles.offlineBanner} accessibilityRole="text">
+              <AppIcon icon={WifiOff} size={size.iconSmall} color={colors.status.danger} />
+              <Text style={styles.offlineText}>Offline · live updates paused</Text>
+            </View>
+          ) : null}
           {inGamePhase && stats ? (
             <HUDBar
               stats={stats}
@@ -212,6 +233,8 @@ export default function GameScreen() {
               onToggleLowPower={() => setLowPower((l) => !l)}
               paused={game.status === 'paused'}
               packState={pack.state}
+              onRetryPack={pack.retry}
+              offline={offline}
             />
           ) : null}
           <EventFeed items={feed} />
@@ -236,7 +259,8 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg.base },
   root: { flex: 1 },
   mapHost: { flex: 1 },
-  center: { justifyContent: 'center' },
+  offlineBanner: { position: 'absolute', top: spacing[2], left: spacing[5], right: spacing[5], minHeight: size.buttonSmall, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing[2], paddingHorizontal: spacing[3], borderRadius: radius.md, borderWidth: stroke.border, borderColor: colors.status.danger, backgroundColor: mapGlass.background },
+  offlineText: { color: colors.text.primary, fontFamily: typography.bodySemiBold, fontSize: fontSize.sm, lineHeight: lineHeight.sm },
   bannerWrap: { paddingHorizontal: spacing[3], paddingTop: spacing[2], backgroundColor: colors.bg.base },
   endedBar: {
     flexDirection: 'row',

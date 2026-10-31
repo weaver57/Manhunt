@@ -25,7 +25,7 @@ export interface LiveMapMarker {
 }
 
 export interface LiveMapProps {
-  styleUrl: string;
+  styleUrl: string | object;
   markers: LiveMapMarker[];
   /** Auto-follow: the native camera tracks the device location. */
   follow: boolean;
