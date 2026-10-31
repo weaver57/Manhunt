@@ -1,0 +1,33 @@
+# Controls the EAS build upload payload.
+# NOTE: a .easignore REPLACES .gitignore for EAS uploads, so junk is listed
+# here, while credential files (google-services.json) and .env.local are
+# deliberately NOT ignored — they must reach the build for Google Sign-In
+# and the Supabase config (extra) to work.
+#
+# The prebuilt android/ project is INCLUDED (not listed below) so EAS builds
+# our exact generated Gradle files — pinning Kotlin 1.9.25 (Compose Compiler
+# 1.5.15 fix) — rather than regenerating them remotely.
+
+node_modules
+.expo
+dist
+web-build
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+Thumbs.db
+GoogleService-Info.plist
+android/local.properties
+android/.gradle
+android/build
+android/.cxx
+android/.idea
+android/*.iml
+android/app/build
