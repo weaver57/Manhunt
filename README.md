@@ -49,6 +49,8 @@ cd manhunt
 cd app
 cp .env.example .env.local
 # Fill in your SUPABASE_URL and SUPABASE_ANON_KEY in .env.local
+# (optional) EXPO_PUBLIC_MAPTILER_KEY for free vector tiles — without it the
+# live map falls back to the public MapLibre demo style.
 ```
 
 ### 3. Run Supabase Locally
@@ -70,3 +72,5 @@ npx expo start
 
 - [Rulebook v1](docs/RULEBOOK.md) — Complete game rules, win conditions, and edge cases.
 - [Design System](docs/DESIGN_SYSTEM.md) — Color tokens, typography scale, and UI components.
+- [Location Engine](docs/LOCATION_ENGINE.md) — GPS filter chain, uploads, heartbeat (Phase 3).
+- [Live Map & HUD](docs/MAP_HUD.md) — MapLibre map, markers, HUD, event feed, offline packs (Phase 4).

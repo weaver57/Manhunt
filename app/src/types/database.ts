@@ -199,6 +199,28 @@ export type Database = {
         };
         Relationships: Relationship[];
       };
+      events: {
+        Row: {
+          id: string;
+          created_at: string;
+          game_id: string;
+          actor_id: string | null;
+          event_type: string;
+          payload: Record<string, unknown>;
+        };
+        Insert: {
+          id?: string;
+          created_at?: string;
+          game_id: string;
+          actor_id?: string | null;
+          event_type: string;
+          payload?: Record<string, unknown>;
+        };
+        Update: {
+          payload?: Record<string, unknown>;
+        };
+        Relationships: Relationship[];
+      };
     };
     Views: {
       game_leaderboard: {

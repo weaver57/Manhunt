@@ -94,6 +94,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         sounds: ['./assets/sounds/tag.wav', './assets/sounds/sos.wav'],
       },
     ],
+    // Wires @maplibre/maplibre-react-native into the native build (gradle/
+    // pods + native SDK versions) for the custom dev build.
+    ['@maplibre/maplibre-react-native'],
     // Wires @react-native-google-signin/google-signin into the native build
     // (gradle deps + plist handling) for the custom dev build.
     '@react-native-google-signin/google-signin',
@@ -111,6 +114,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
     // Read in-app via expo-constants (src/lib/auth/useGoogleSignIn.ts).
     googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID,
+    // Free-tier vector tiles for the live map (src/lib/map/styles.ts).
+    mapTilerKey: process.env.EXPO_PUBLIC_MAPTILER_KEY ?? null,
     eas: {
       projectId: 'e1d74056-33e0-4c60-9588-5bb8d49bdda6',
     },

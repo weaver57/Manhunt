@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import QRCode from 'react-native-qrcode-svg';
@@ -51,6 +51,20 @@ export default function LobbyScreen() {
         : tracking.phase === 'warming'
           ? `GPS warm-up ${Math.min(tracking.warmupCount, 3)}/3`
           : 'GPS off';
+
+  // Auto-enter the live map once the host starts the game (countdown/head
+  // start/active). Guarded by the last-seen status so returning to the lobby
+  // to tweak roles mid-game never loops the player back.
+  const autoNavRef = useRef(false);
+  useEffect(() => {
+    if (!game) return;
+    const entering = ['countdown', 'head_start', 'active'].includes(game.status);
+    if (entering && !autoNavRef.current) {
+      autoNavRef.current = true;
+      router.push(`/game/${game.id}`);
+    }
+    if (game.status === 'lobby' || game.status === 'ended') autoNavRef.current = false;
+  }, [game, router]);
 
   if (lobby.isLoading) return <LoadingState label="Opening lobby" />;
   if (lobby.isError || !game) {
