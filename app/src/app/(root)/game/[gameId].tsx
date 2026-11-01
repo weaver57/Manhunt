@@ -30,6 +30,12 @@ import { LiveMap, type LiveMapMarker } from '@/components/map/LiveMap';
 import { HUDBar } from '@/components/map/HUDBar';
 import { EventFeed } from '@/components/map/EventFeed';
 import { MapEdgeAtmosphere } from '@/components/map/MapEdgeAtmosphere';
+import { PlayAreaOverlay } from '@/components/map/PlayAreaOverlay';
+import { BoundaryBanner, ShrinkCountdown } from '@/components/game/BoundaryBanner';
+import { TagDock } from '@/components/game/TagDock';
+import { RunnerConfirmBanner, HostDisputeBanner } from '@/components/game/CatchBanners';
+import { useTagging } from '@/lib/tag/useTagging';
+import { useBoundary } from '@/lib/area/useBoundary';
 
 /**
  * Live game screen (Phase 4): MapLibre map + HUD + event feed.
@@ -87,6 +93,29 @@ export default function GameScreen() {
     () => (game ? hudStats({ game, players, userId, fixes: activeFixes, now }) : null),
     [game, players, userId, activeFixes, now],
   );
+
+  // ---- Phase 5: tagging + Phase 6: boundary evaluation ----------------------
+  const myPlayer = useMemo(
+    () => players.find((p) => p.user_id === userId),
+    [players, userId],
+  );
+  const startedAtMs = useMemo(
+    () => (game?.started_at ? Date.parse(game.started_at) : null),
+    [game?.started_at],
+  );
+  const tagging = useTagging({
+    gameId: gameId ?? undefined,
+    cooldownS: game?.settings?.cooldownS ?? 5,
+  });
+  const boundary = useBoundary({
+    gameId: gameId ?? undefined,
+    settings: game?.settings ?? null,
+    startedAtMs,
+    active: !!game && game.status === 'active',
+  });
+  const targetAccuracyM = stats?.target?.targetId
+    ? activeFixes[stats.target.targetId]?.accuracy ?? null
+    : null;
 
   // ---- Markers (visibility filtered) ----------------------------------------
   const markers = useMemo<LiveMapMarker[]>(() => {
@@ -211,8 +240,20 @@ export default function GameScreen() {
             recenterSignal={recenterSignal}
             headingUp={headingUp}
             lowPower={lowPower}
-          />
+          >
+            {game?.settings?.playArea && game.settings.playArea.type !== 'none' ? (
+              <PlayAreaOverlay settings={game.settings} startedAtMs={startedAtMs} nowMs={now} />
+            ) : null}
+          </LiveMap>
           <MapEdgeAtmosphere urgentRole={urgentRole} />
+          <BoundaryBanner boundary={boundary} />
+          {game?.settings?.playArea?.type === 'shrinking' ? (
+            <ShrinkCountdown
+              nextAtMs={boundary.local?.nextShrink?.nextAtMs ?? null}
+              nextRadiusM={boundary.local?.nextShrink?.nextRadiusM ?? null}
+              now={now}
+            />
+          ) : null}
           {offline ? (
             <View style={styles.offlineBanner} accessibilityRole="text">
               <AppIcon icon={WifiOff} size={size.iconSmall} color={colors.status.danger} />
@@ -244,6 +285,41 @@ export default function GameScreen() {
           <View style={styles.bannerWrap}>
             <InlineNotice message="Mock GPS detected — your marker is based on a suspicious fix. The host has been flagged." tone="danger" />
           </View>
+        ) : null}
+        {inGamePhase ? (
+          <RunnerConfirmBanner
+            gameId={gameId}
+            runnerId={userId}
+            active={game?.status === 'active'}
+            tagging={tagging}
+            setupWindowS={game?.settings?.confirmWindowS ?? 10}
+          />
+        ) : null}
+        {inGamePhase ? (
+          <HostDisputeBanner gameId={gameId} isHost={game?.host_id === userId} tagging={tagging} />
+        ) : null}
+        {inGamePhase && game ? (
+          <TagDock
+            gameId={gameId}
+            gameStatus={game.status}
+            myRole={myPlayer?.role}
+            myStatus={myPlayer?.status}
+            settings={game.settings}
+            target={stats?.target ?? null}
+            targetAccuracyM={targetAccuracyM}
+            lastFix={
+              selfTrack
+                ? {
+                    latitude: selfTrack.current.latitude,
+                    longitude: selfTrack.current.longitude,
+                    accuracy: selfTrack.current.accuracy,
+                    timestamp: selfTrack.current.timestamp,
+                  }
+                : null
+            }
+            tagging={tagging}
+            boundary={boundary}
+          />
         ) : null}
         {ended ? (
           <View style={styles.endedBar}>

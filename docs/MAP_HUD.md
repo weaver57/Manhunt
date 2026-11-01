@@ -53,6 +53,15 @@ Files (all under `app/src/`):
 | `app/(root)/game/[gameId].tsx` | Live screen: composes all of the above |
 | `app/(root)/lobby/[gameId].tsx` | Auto-navigates to the map when the host starts the game |
 
+## Visual treatment
+
+- Keep the map full bleed. Add only a restrained edge vignette, with a role glow at the bottom edge when the nearest opponent is within 100 m; leave the center clear.
+- Use translucent, high-contrast glass for the timer, role, player count, controls, distance, and feed. The timer uses tabular mono numerals.
+- Markers pair the role-colored ring with a role glyph. Stale markers fade and retain a readable last-seen label.
+- Map controls keep a minimum 48 px touch area. The event feed has its own expand/collapse target so list scrolling does not toggle the panel.
+- Offline mode shows a slim saved-map banner and moves the HUD down to avoid overlap. Saved tiles do not imply live positions are current.
+- A failed lobby fetch has a retry state; it must not remain on the loading skeleton indefinitely.
+
 ## Key behaviours
 
 - **Never teleport dots.** Between the previous and current fix the marker is

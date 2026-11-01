@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { BatteryLow, MapPinOff, Navigation, Layers, ShieldAlert } from 'lucide-react-native';
 import { colors, fontSize, lineHeight, spacing, typography } from '@/constants/theme';
-import { Button, InlineNotice, PageHeader, Screen, SectionLabel } from '@/components/ui';
+import { AppIcon, Button, Card, InlineNotice, PageHeader, Screen, SectionLabel } from '@/components/ui';
 import {
   openSystemSettings,
   requestGamePermissions,
@@ -22,10 +22,9 @@ export default function LocationSetupScreen() {
   const [state, setState] = useState<Awaited<ReturnType<typeof resolvePermissionState>> | null>(null);
   const [battery, setBattery] = useState<BatteryStatus | null>(null);
   const [requesting, setRequesting] = useState(false);
+  const [permissionError, setPermissionError] = useState(false);
 
-  useEffect(() => {
-    void refresh();
-  }, []);
+  useFocusEffect(useCallback(() => { void refresh(); }, []));
 
   async function refresh() {
     const [nextState, nextBattery] = await Promise.all([
@@ -41,10 +40,13 @@ export default function LocationSetupScreen() {
     try {
       const next = await requestGamePermissions();
       setState(next);
+      setPermissionError(false);
       if (next.foregroundGranted) {
         // User resolved the issue — return to the lobby which re-checks the gate.
         router.back();
       }
+    } catch {
+      setPermissionError(true);
     } finally {
       setRequesting(false);
     }
@@ -66,6 +68,9 @@ export default function LocationSetupScreen() {
 
         {foregroundBlocked ? (
           <InlineNotice message="Location is currently denied, so no game can start on this phone." tone="danger" />
+        ) : null}
+        {state === null || permissionError ? (
+          <InlineNotice message={permissionError ? 'Could not check location access. Open app settings, then check again.' : 'Checking location access…'} tone={permissionError ? 'warning' : 'info'} />
         ) : null}
 
         <CardBlock
@@ -109,9 +114,6 @@ export default function LocationSetupScreen() {
           body="If a fake-GPS app is detected while a game is running, your row is flagged and visible to the host. Mocked positions are never uploaded."
         />
 
-        {backgroundMissingIOS ? (
-          <InlineNotice message="You granted “While using”. Tracking pauses when the app is closed — keep the screen on during the game, or set location to “Always” for proper pocket play." tone="warning" />
-        ) : null}
         {backgroundMissingAndroid ? (
           <InlineNotice message="Background permission was not granted. The app can still track while it stays open, and the location notification keeps the tracker alive when started from the game screen." tone="warning" />
         ) : null}
@@ -127,8 +129,9 @@ export default function LocationSetupScreen() {
               }
             }}
             loading={requesting}
+            disabled={state === null}
           />
-          <Button variant="secondary" label="Open app settings" onPress={openSystemSettings} />
+          <Button variant="secondary" label="Open app settings" onPress={openSystemSettings} disabled={state === null} />
           <Button variant="ghost" label="Back" onPress={() => router.back()} />
         </View>
       </Screen>
@@ -138,13 +141,15 @@ export default function LocationSetupScreen() {
 
 function CardBlock({ icon: Icon, title, body }: { icon: typeof Navigation; title: string; body: string }) {
   return (
-    <View style={styles.block}>
-      <View style={styles.iconBox}><Icon size={22} color={colors.brand.primary} /></View>
-      <View style={styles.copy}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subtitle}>{body}</Text>
+    <Card padding="md">
+      <View style={styles.block}>
+        <View style={styles.iconBox}><AppIcon icon={Icon} color={colors.brand.primary} /></View>
+        <View style={styles.copy}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.subtitle}>{body}</Text>
+        </View>
       </View>
-    </View>
+    </Card>
   );
 }
 
@@ -154,7 +159,7 @@ const styles = StyleSheet.create({
   block: { flexDirection: 'row', gap: spacing[3], alignItems: 'flex-start' },
   iconBox: { minWidth: spacing[12], alignItems: 'center', paddingTop: spacing[1] },
   copy: { flex: 1, gap: spacing[1] },
-  title: { color: colors.text.primary, fontFamily: typography.bodySemiBold, fontSize: fontSize.md, lineHeight: lineHeight.md },
+  title: { color: colors.text.primary, fontFamily: typography.subheading, fontSize: fontSize.md, lineHeight: lineHeight.md },
   subtitle: { color: colors.text.secondary, fontFamily: typography.body, fontSize: fontSize.base, lineHeight: lineHeight.base },
   actions: { gap: spacing[3], marginTop: spacing[6] },
 });

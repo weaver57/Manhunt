@@ -70,6 +70,41 @@ export function describeFeedEvent(row: EventRow, players: PlayerLike[], now: num
       const newHost = typeof payload.newHostId === 'string' ? nameOf(payload.newHostId, players) : null;
       return { ...base, text: endWithPeriod(`Host transferred to ${newHost ?? who}`), tone: 'warning' };
     }
+    // -----------------------------------------------------------------------
+    // Phase 5 — tag & catch
+    // -----------------------------------------------------------------------
+    case 'tag': {
+      const runnerId = typeof payload.runnerId === 'string' ? payload.runnerId : null;
+      const runner = runnerId ? nameOf(runnerId, players) : 'Someone';
+      const chaser = typeof payload.chaserId === 'string' ? nameOf(payload.chaserId, players) : 'Someone';
+      const infected = payload.infected === true;
+      return {
+        ...base,
+        text: endWithPeriod(`${chaser} tagged ${runner}${infected ? ' — they are now a chaser' : ''}`),
+        tone: 'danger',
+      };
+    }
+    case 'tag_disputed': {
+      const runnerId = typeof payload.runnerId === 'string' ? payload.runnerId : null;
+      return { ...base, text: endWithPeriod(`${runnerId ? nameOf(runnerId, players) : who} disputed a catch`), tone: 'warning' };
+    }
+    case 'tag_reversed': {
+      const runnerId = typeof payload.runnerId === 'string' ? payload.runnerId : null;
+      return { ...base, text: endWithPeriod(`Catch reversed — ${runnerId ? nameOf(runnerId, players) : 'the runner'} is back in`), tone: 'success' };
+    }
+    // -----------------------------------------------------------------------
+    // Phase 6 — play area
+    // -----------------------------------------------------------------------
+    case 'zone_warning':
+      return { ...base, text: endWithPeriod(`${who} is close to the boundary`), tone: 'warning' };
+    case 'zone_penalty': {
+      const kind = typeof payload.type === 'string' ? payload.type : 'issued';
+      const kindText =
+        kind === 'time' ? 'a time penalty' :
+        kind === 'disqualify' ? 'and is disqualified' :
+        kind === 'points' ? 'and lost points' : '— their position is revealed';
+      return { ...base, text: endWithPeriod(`${who} left the play area ${kindText}`), tone: 'danger' };
+    }
     // Grace for later phases (tags, zone warnings) that add new types before
     // the feed model catches up - never crash the feed.
     default:

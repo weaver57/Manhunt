@@ -82,6 +82,8 @@ export interface HudStats {
   left: number;
   /** Nearest-opponent strip ("Chaser 340 m"), null when not applying. */
   nearest: { role: string; label: string } | null;
+  /** Full hint for the tag dock (target user id + raw metres). */
+  target: { targetId: string; distanceM: number; targetRole: string } | null;
 }
 
 export function hudStats({ game, players, userId, fixes, now }: HudStatsInput): HudStats {
@@ -95,6 +97,9 @@ export function hudStats({ game, players, userId, fixes, now }: HudStatsInput): 
     left,
     nearest: hint
       ? { role: hint.targetRole, label: formatDistanceM(hint.distanceM) }
+      : null,
+    target: hint
+      ? { targetId: hint.targetId, distanceM: hint.distanceM, targetRole: hint.targetRole }
       : null,
   };
 }

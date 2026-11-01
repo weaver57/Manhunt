@@ -10,6 +10,11 @@ import {
   Manrope_600SemiBold,
   Manrope_700Bold,
 } from '@expo-google-fonts/manrope';
+import {
+  SpaceGrotesk_400Regular,
+  SpaceGrotesk_600SemiBold,
+  SpaceGrotesk_700Bold,
+} from '@expo-google-fonts/space-grotesk';
 import { JetBrainsMono_400Regular } from '@expo-google-fonts/jetbrains-mono';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -26,6 +31,9 @@ const FONT_MAP = {
   ManropeMedium: Manrope_500Medium,
   ManropeSemiBold: Manrope_600SemiBold,
   ManropeBold: Manrope_700Bold,
+  SpaceGroteskRegular: SpaceGrotesk_400Regular,
+  SpaceGroteskSemiBold: SpaceGrotesk_600SemiBold,
+  SpaceGroteskBold: SpaceGrotesk_700Bold,
   JetBrainsMonoRegular: JetBrainsMono_400Regular,
 };
 

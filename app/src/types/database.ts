@@ -123,6 +123,10 @@ export type Database = {
           is_ready: boolean;
           last_seen_at: string;
           mock_detected_at: string | null;
+          immunity_until: string | null;
+          out_of_bounds_since: string | null;
+          boundary_state: 'inside' | 'near_edge' | 'grace' | 'grace_paused' | 'oob_penalized';
+          oob_penalty_count: number;
         };
         Insert: {
           game_id: string;
@@ -174,28 +178,62 @@ export type Database = {
         Row: {
           id: string;
           game_id: string;
-          chaser_id: string;
+          chaser_id: string | null;
           runner_id: string;
           tagged_at: string;
-          chaser_lat: number;
-          chaser_lng: number;
-          runner_lat: number;
-          runner_lng: number;
+          chaser_lat: number | null;
+          chaser_lng: number | null;
+          runner_lat: number | null;
+          runner_lng: number | null;
           distance_m: number;
           validated: boolean;
+          idempotency_key: string | null;
+          method: 'tap' | 'confirm' | 'qr' | 'auto' | 'honor';
+          confirm_state: 'pending' | 'confirmed' | 'auto_accepted' | 'disputed' | 'reversed' | null;
+          chaser_accuracy_m: number | null;
+          runner_accuracy_m: number | null;
+          requested_at: string;
+          disputed_at: string | null;
+          reviewed_at: string | null;
         };
         Insert: {
           game_id: string;
-          chaser_id: string;
+          chaser_id?: string | null;
           runner_id: string;
-          chaser_lat: number;
-          chaser_lng: number;
-          runner_lat: number;
-          runner_lng: number;
+          chaser_lat?: number | null;
+          chaser_lng?: number | null;
+          runner_lat?: number | null;
+          runner_lng?: number | null;
           distance_m: number;
+          method?: 'tap' | 'confirm' | 'qr' | 'auto' | 'honor';
+          idempotency_key?: string | null;
         };
         Update: {
           validated?: boolean;
+          confirm_state?: 'pending' | 'confirmed' | 'auto_accepted' | 'disputed' | 'reversed' | null;
+          disputed_at?: string | null;
+          reviewed_at?: string | null;
+        };
+        Relationships: Relationship[];
+      };
+      areas: {
+        Row: {
+          id: string;
+          host_id: string;
+          name: string;
+          definition: PlayArea;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          host_id: string;
+          name: string;
+          definition: PlayArea;
+        };
+        Update: {
+          name?: string;
+          definition?: PlayArea;
         };
         Relationships: Relationship[];
       };
@@ -239,16 +277,62 @@ export type Database = {
       };
     };
     Functions: {
-      attempt_tag: {
+      request_tag: {
         Args: {
           p_game_id: string;
-          p_chaser_id: string;
           p_runner_id: string;
+          p_idempotency_key?: string | null;
+          p_lat?: number | null;
+          p_lng?: number | null;
+          p_accuracy_m?: number | null;
+          p_recorded_at?: string | null;
         };
+        Returns: TagResultJson;
+      };
+      qr_tag: {
+        Args: {
+          p_game_id: string;
+          p_token: string;
+          p_lat: number;
+          p_lng: number;
+          p_accuracy_m: number;
+          p_recorded_at: string;
+        };
+        Returns: TagResultJson;
+      };
+      honor_catch: {
+        Args: { p_game_id: string };
+        Returns: TagResultJson;
+      };
+      my_qr_token: {
+        Args: { p_game_id: string };
+        Returns: { token: string | null; expiresInS?: number } | null;
+      };
+      confirm_tag: {
+        Args: { p_game_id: string; p_tag_id: string; p_accept: boolean };
+        Returns: { success: boolean; confirm_state?: string; reason?: string; tag_not_found?: string };
+      };
+      review_tag: {
+        Args: { p_game_id: string; p_tag_id: string; p_reverse: boolean };
+        Returns: { success: boolean; confirm_state?: string; reason?: string };
+      };
+      judge_bounds: {
+        Args: { p_game_id: string; p_lat: number; p_lng: number; p_accuracy_m?: number | null };
         Returns: {
           success: boolean;
-          reason: string;
-          distance_m: number | null;
+          reason?: string;
+          state: 'inside' | 'near_edge' | 'grace' | 'grace_paused' | 'oob_penalized';
+          noBoundary?: boolean;
+          noGo?: boolean;
+          inside?: boolean;
+          edgeM?: number | null;
+          graceRemainingS?: number | null;
+          dwellS?: number | null;
+          accuracyPaused?: boolean;
+          penaltyFired?: boolean;
+          penalty?: string;
+          radiusM?: number | null;
+          nextShrink?: { nextAtMs: number | null; nextRadiusM: number | null } | null;
         };
       };
       generate_game_code: {
@@ -298,6 +382,22 @@ export type PlayerRole = 'runner' | 'chaser' | 'spectator';
 
 export type PlayerStatus = 'waiting' | 'active' | 'tagged' | 'sos' | 'disconnected';
 
+export type TagMode = 'tap' | 'confirm' | 'qr' | 'auto' | 'honor';
+
+export type BoundaryPenalty = 'reveal' | 'time' | 'disqualify' | 'points';
+
+/** Shape of the jsonb result of the tag RPCs (request_tag / qr_tag / honor_catch). */
+export interface TagResultJson {
+  success: boolean;
+  reason: string;
+  distance_m?: number | null;
+  tag_id?: string | null;
+  confirm_state?: string | null;
+  retry_in_s?: number | null;
+  immunity_ends_at?: string | null;
+  infected?: boolean;
+}
+
 // ---------------------------------------------------------------------------
 // Nested JSON types
 // ---------------------------------------------------------------------------
@@ -309,15 +409,27 @@ export type VisibilityMode =
   | 'radar'
   | 'classic_manhunt';
 
-export type AreaType = 'circle' | 'polygon' | 'city_wide' | 'shrinking';
+export type AreaType = 'none' | 'circle' | 'polygon' | 'rectangle' | 'city_wide' | 'shrinking';
+
+export interface LatLngJson {
+  latitude: number;
+  longitude: number;
+}
 
 export interface PlayArea {
   type: AreaType;
   /** For 'circle' and 'shrinking' */
-  center?: { latitude: number; longitude: number };
+  center?: LatLngJson;
   radiusM?: number;
   /** For 'polygon' */
-  vertices?: { latitude: number; longitude: number }[];
+  vertices?: LatLngJson[];
+  /** For 'rectangle': two opposite corners dragged by the host. */
+  corners?: [LatLngJson, LatLngJson];
+  /** For 'shrinking' */
+  shrinkDelayS?: number;
+  shrinkStepS?: number;
+  shrinkFactorK?: number;
+  minRadiusM?: number;
 }
 
 export interface GameSettings {
@@ -333,6 +445,16 @@ export interface GameSettings {
   playArea: PlayArea | null;
   noGoZones: PlayArea[];
   pingIntervalS?: number;        // for periodic_pings mode
+  // Phase 5 — tag & catch
+  tagMode: TagMode;              // 'tap' is the default variant
+  immunitySeconds: number;       // 10-20 s after being caught/respawned
+  confirmWindowS: number;        // tag+confirm variant acceptance window
+  cooldownS: number;             // failed-tag button-spam cooldown
+  autoCatchSeconds: number;      // auto-catch dwell inside the radius
+  // Phase 6 — play area boundary behavior
+  boundaryGraceS: number;        // grace period outside the boundary
+  boundaryWarningM: number;      // early-warning distance from the edge
+  boundaryPenalty: BoundaryPenalty;
 }
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
@@ -348,4 +470,12 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   playArea: null,
   noGoZones: [],
   pingIntervalS: 120,
+  tagMode: 'tap',
+  immunitySeconds: 15,
+  confirmWindowS: 10,
+  cooldownS: 5,
+  autoCatchSeconds: 30,
+  boundaryGraceS: 30,
+  boundaryWarningM: 50,
+  boundaryPenalty: 'reveal',
 };

@@ -44,6 +44,10 @@ function player(overrides: Partial<GamePlayer> = {}): GamePlayer {
     is_ready: false,
     last_seen_at: new Date(NOW).toISOString(),
     mock_detected_at: null,
+    immunity_until: null,
+    out_of_bounds_since: null,
+    boundary_state: 'inside',
+    oob_penalty_count: 0,
     ...overrides,
   };
 }

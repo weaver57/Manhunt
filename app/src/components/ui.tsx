@@ -60,11 +60,11 @@ export function Button({
 }
 
 export function Card({ children, style, padding = 'md', accentEdge = false, tone = 'default' }: {
-  children: ReactNode; style?: StyleProp<ViewStyle>; padding?: 'none' | 'sm' | 'md' | 'lg'; accentEdge?: boolean; tone?: 'default' | 'hero';
+  children: ReactNode; style?: StyleProp<ViewStyle>; padding?: 'none' | 'sm' | 'md' | 'lg'; accentEdge?: boolean; tone?: 'default' | 'hero' | 'outline';
 }) {
   return (
     <LinearGradient colors={[colors.borderStrong, colors.borderSubtle]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.cardFrame, style]}>
-      <View style={[styles.card, styles[`card_${padding}`]]}>
+      <View style={[styles.card, tone === 'outline' && styles.cardOutline, styles[`card_${padding}`]]}>
         {tone === 'hero' ? <LinearGradient pointerEvents="none" colors={[...colors.gradient.brand, 'transparent']} locations={[0, 0.55, 1]} style={[StyleSheet.absoluteFill, styles.heroWash]} /> : null}
         <LinearGradient pointerEvents="none" colors={[colors.atmosphere.highlight, 'transparent']} style={styles.cardHighlight} />
         {accentEdge ? <View style={styles.cardEdge} /> : null}
@@ -289,6 +289,7 @@ const styles = StyleSheet.create({
   buttonText_ghost: { color: colors.brand.primary },
   cardFrame: { borderRadius: radius.lg, overflow: 'hidden', padding: stroke.border },
   card: { flex: 1, position: 'relative', backgroundColor: colors.surfaceBase, borderRadius: radius.lg, overflow: 'hidden' },
+  cardOutline: { backgroundColor: 'transparent' },
   heroWash: { opacity: opacity.heroWash },
   cardHighlight: { position: 'absolute', top: 0, left: 0, right: 0, height: stroke.border },
   cardEdge: { height: stroke.border, width: '100%', backgroundColor: colors.brand.primary },
@@ -315,7 +316,7 @@ const styles = StyleSheet.create({
   listRow: { minHeight: size.row, flexDirection: 'row', alignItems: 'center', gap: spacing[3], paddingVertical: spacing[3] },
   listLeading: { minWidth: size.avatarSmall, alignItems: 'center' },
   listCopy: { flex: 1, gap: spacing[1] },
-  listTitle: { color: colors.text.primary, fontFamily: typography.bodySemiBold, fontSize: fontSize.md, lineHeight: lineHeight.md },
+  listTitle: { color: colors.text.primary, fontFamily: typography.subheading, fontSize: fontSize.md, lineHeight: lineHeight.md },
   listSubtitle: { color: colors.text.secondary, fontFamily: typography.body, fontSize: fontSize.sm, lineHeight: lineHeight.sm },
   toggleRow: { minHeight: size.row, flexDirection: 'row', alignItems: 'center', gap: spacing[4] },
   fieldGap: { gap: spacing[2] },

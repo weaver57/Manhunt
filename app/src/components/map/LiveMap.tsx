@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Camera, MapView, MarkerView, UserTrackingMode } from '@maplibre/maplibre-react-native';
 import type { CameraRef } from '@maplibre/maplibre-react-native';
@@ -35,6 +36,8 @@ export interface LiveMapProps {
   recenterSignal: number;
   headingUp: boolean;
   lowPower: boolean;
+  /** Extra map content: play-area overlays, zones etc. rendered inside MapView. */
+  children?: ReactNode;
 }
 
 /**
@@ -42,7 +45,7 @@ export interface LiveMapProps {
  * UserTrackingMode; manual pans pause follow (marker jitter and
  * never-teleport edge cases handled by renderPosition + staleness fading).
  */
-export function LiveMap({ styleUrl, markers, follow, onUserPan, recenterSignal, headingUp, lowPower }: LiveMapProps) {
+export function LiveMap({ styleUrl, markers, follow, onUserPan, recenterSignal, headingUp, lowPower, children }: LiveMapProps) {
   const cameraRef = useRef<CameraRef>(null);
   const [zoomLevel, setZoomLevel] = useState(FOLLOW_ZOOM);
 
@@ -108,6 +111,7 @@ export function LiveMap({ styleUrl, markers, follow, onUserPan, recenterSignal, 
           zoomLevel={FOLLOW_ZOOM}
           animationDuration={lowPower ? 0 : motion.base}
         />
+        {children}
         {markerViews}
       </MapView>
     </View>

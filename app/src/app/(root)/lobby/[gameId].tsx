@@ -9,6 +9,7 @@ import { useGameLobby, type LobbyPlayer } from '@/lib/games/useGameLobby';
 import { useGameTracking } from '@/lib/location/useGameTracking';
 import { colors, fontSize, lineHeight, size, spacing, tracking, typography } from '@/constants/theme';
 import { AppIcon, Avatar, Button, Card, Chip, InlineNotice, PageHeader, Screen, SectionLabel, Sheet } from '@/components/ui';
+import { HostSettingsSheet } from '@/components/game/HostSettingsSheet';
 import ErrorState from '@/components/ErrorState';
 import LoadingState from '@/components/LoadingState';
 
@@ -34,6 +35,7 @@ export default function LobbyScreen() {
   const isHost = game?.host_id === session?.user.id;
   const self = players.find((player) => player.user_id === session?.user.id);
   const [selectedPlayer, setSelectedPlayer] = useState<LobbyPlayer | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const { tracking, gate } = useGameTracking(
     game?.id,
@@ -215,6 +217,13 @@ export default function LobbyScreen() {
             />
           ) : null}
           {isHost && game.status === 'lobby' ? (
+            <Button
+              variant="secondary"
+              label="Game rules & play area"
+              onPress={() => setSettingsOpen(true)}
+            />
+          ) : null}
+          {isHost && game.status === 'lobby' ? (
             <Button label="Start game" onPress={() => void run(() => lobby.start(false), 'Could not start the game. Check that everyone is ready.')} />
           ) : null}
           {isHost && ['countdown', 'head_start', 'active', 'paused'].includes(game.status) ? (
@@ -255,6 +264,19 @@ export default function LobbyScreen() {
               ]);
             }} />
           </View>
+        ) : null}
+      </Sheet>
+
+      <Sheet visible={settingsOpen} onClose={() => setSettingsOpen(false)} title="Game rules">
+        {game ? (
+          <HostSettingsSheet
+            visible={settingsOpen}
+            onClose={() => setSettingsOpen(false)}
+            gameId={game.id}
+            settings={game.settings}
+            hostId={session?.user.id}
+            onSaved={() => { void lobby.refetch(); }}
+          />
         ) : null}
       </Sheet>
     </SafeAreaView>

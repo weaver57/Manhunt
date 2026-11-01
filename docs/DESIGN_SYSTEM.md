@@ -38,7 +38,7 @@ Brand gradient is #8E7CFF to #5B8CFF and belongs on primary actions and hero tre
 
 ### Atmosphere and surfaces
 
-`AtmosphereBackground` provides static ambient glows, topographic contours, optional hero/lobby radar rings, and edge vignettes. Use the `home`, `hero`, `lobby`, and `quiet` variants to match screen intent. Keep ambient layers static for performance; avoid introducing blur or animation without a clear need and reduced-motion/low-power fallback. Do not place grain or atmospheric overlays over a future live map.
+`AtmosphereBackground` provides static ambient glows, topographic contours, optional hero/lobby radar rings, and edge vignettes. Use the `home`, `hero`, `lobby`, and `quiet` variants to match screen intent. Keep ambient layers static for performance; avoid introducing blur or animation without a clear need and reduced-motion/low-power fallback. The live map uses only edge vignettes and a restrained role glow; keep the map center clear and never place grain over it.
 
 Shared cards use a gradient hairline border and a subtle inner top highlight. Hero cards may add the brand wash. Primary buttons use the brand gradient and highlight. Limit atmosphere to one visual focal point per screen and preserve text contrast over all background layers.
 
@@ -46,7 +46,8 @@ High-contrast palette values are also defined in theme.ts. The app chooses a dar
 
 ### Type
 
-- Manrope for interface copy: regular, medium, semibold, and bold.
+- Space Grotesk for screen titles and rare display moments; use semibold for titles and bold only for the wordmark.
+- Manrope for section headings, controls, and body copy: regular for paragraphs, medium for emphasized body text, semibold for labels and subheadings.
 - JetBrains Mono for codes, timers, and changing numeric values.
 - Scale: display 44/48, title 28/34 and 22/28, body 17/24 and 15/22, small 13/18, label 12/16.
 - Keep React Native font scaling enabled. Text must wrap instead of being clipped.
@@ -95,6 +96,6 @@ Before finishing a screen, confirm:
 
 ## Current app scope
 
-The current app contains sign-in, home, create/join, profile, record placeholder, and lobby screens. A live map/gameplay screen is not present in this codebase yet, so map styling, live HUD, tag action, zone states, and results remain to be built when that route is added.
+The app now includes sign-in, home, create/join, profile, lobby, location setup, and the Phase 4 live map/HUD. The map has role markers, timer/player HUD, nearest-opponent distance, event feed, camera controls, and saved-tile/offline presentation. Tagging, zone states, countdown presentation, full results, and reactive boundary effects remain future phases.
 
-Grain texture and reactive chaser/runner, zone, offline, countdown, and results effects are intentionally not enabled yet: the corresponding routes/states are absent, and the current implementation avoids extra native dependencies and continuous animation.
+Grain texture, drifting glows, radar sweeps, and animated effects are intentionally not enabled yet. Map urgency is a static edge glow; additional reactions should wait for the relevant game state and a reduced-motion implementation.
